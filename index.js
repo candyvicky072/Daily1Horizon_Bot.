@@ -6,12 +6,14 @@ const bot = new TelegramBot(token, { polling: true });
 bot.onText(/\/start/, (msg) => {
   bot.sendMessage(
     msg.chat.id,
-    "👋 Welcome to Daily Horizon Bot!\nChoose an option below:",
+    "📰 *Welcome to Daily Horizon!*\n\nYour source for the latest news.\nChoose a category:",
     {
+      parse_mode: "Markdown",
       reply_markup: {
         keyboard: [
-          ["📰 News", "ℹ️ About"],
-          ["❓ Help", "👋 Hello"]
+          ["🌍 World News", "⚽ Football"],
+          ["💰 Business", "💻 Technology"],
+          ["ℹ️ About", "📢 Join Channel"]
         ],
         resize_keyboard: true
       }
@@ -20,42 +22,42 @@ bot.onText(/\/start/, (msg) => {
 });
 
 bot.on("message", (msg) => {
+  const chatId = msg.chat.id;
   const text = msg.text;
 
   if (text === "/start") return;
 
   switch (text) {
-    case "👋 Hello":
-      bot.sendMessage(msg.chat.id, "Hello! 😊 Welcome to Daily Horizon.");
+    case "🌍 World News":
+      bot.sendMessage(chatId, "🌍 World news updates will appear here soon.");
       break;
 
-    case "❓ Help":
-      bot.sendMessage(
-        msg.chat.id,
-        "Use the buttons below to interact with me."
-      );
+    case "⚽ Football":
+      bot.sendMessage(chatId, "⚽ Latest football news coming soon.");
       break;
 
-    case "📰 News":
-      bot.sendMessage(
-        msg.chat.id,
-        "📰 No news has been published yet. Stay tuned!"
-      );
+    case "💰 Business":
+      bot.sendMessage(chatId, "💰 Business and market updates coming soon.");
+      break;
+
+    case "💻 Technology":
+      bot.sendMessage(chatId, "💻 Technology news coming soon.");
       break;
 
     case "ℹ️ About":
+      bot.sendMessage(chatId, "📰 Daily Horizon\nYour trusted news source on Telegram.");
+      break;
+
+    case "📢 Join Channel":
       bot.sendMessage(
-        msg.chat.id,
-        "🤖 Daily Horizon Bot\nVersion 1.0\nPowered by Railway."
+        chatId,
+        "Join our Telegram channel:\nhttps://t.me/YOUR_CHANNEL_USERNAME"
       );
       break;
 
     default:
-      bot.sendMessage(
-        msg.chat.id,
-        "Please use the buttons below."
-      );
+      bot.sendMessage(chatId, "Please choose one of the buttons below.");
   }
 });
 
-console.log("Bot is running...");
+console.log("Daily Horizon Bot is running...");
