@@ -87,7 +87,8 @@ bot.onText(/\/start/, (msg) => {
         keyboard: [
           ["🌍 World News", "⚽ Football"],
           ["💰 Business", "💻 Technology"],
-          ["ℹ️ About", "📢 Join Channel"]
+          ["🔎 Search News", "ℹ️ About"],
+          ["📢 Join Channel"]
         ],
         resize_keyboard: true
       }
@@ -104,7 +105,7 @@ function isAdmin(msg) {
 }
 
 // ==========================================
-// ADMIN COMMAND
+// ADMIN PANEL
 // ==========================================
 
 bot.onText(/\/admin/, (msg) => {
@@ -175,7 +176,7 @@ bot.onText(/\/status/, (msg) => {
   bot.sendMessage(
     msg.chat.id,
     "📊 *Daily Horizon Status*\n\n" +
-    `🤖 Bot: Online\n` +
+    "🤖 Bot: Online\n" +
     `📢 Channel: ${CHANNEL_ID}\n` +
     `⏰ Automatic posting: ${
       autoPosting ? "ON ✅" : "OFF ⏸️"
@@ -249,7 +250,7 @@ bot.onText(/\/resume/, (msg) => {
   if (!isAdmin(msg)) {
     bot.sendMessage(
       msg.chat.id,
-      "▶️ Only the admin can resume the bot."
+      "❌ You are not authorized."
     );
     return;
   }
@@ -270,7 +271,8 @@ async function getNews(chatId, url) {
 
   try {
 
-    const feed = await parser.parseURL(url);
+    const feed =
+      await parser.parseURL(url);
 
     let message =
       "📰 *Latest Headlines*\n\n";
@@ -528,6 +530,157 @@ setInterval(
 );
 
 // ==========================================
+// NEWS SEARCH
+// ==========================================
+
+bot.onText(
+  /\/search(?:\s+(.+))?/i,
+  async (msg, match) => {
+
+    const chatId = msg.chat.id;
+    const keyword = match[1];
+
+    if (!keyword) {
+
+      await bot.sendMessage(
+        chatId,
+        "🔎 *News Search*\n\n" +
+        "Use the command like this:\n\n" +
+        "`/search Messi`\n" +
+        "`/search Nigeria`\n" +
+        "`/search Bitcoin`",
+        {
+          parse_mode: "Markdown"
+        }
+      );
+
+      return;
+    }
+
+    await bot.sendMessage(
+      chatId,
+      `🔍 Searching news for *${keyword}*...`,
+      {
+        parse_mode: "Markdown"
+      }
+    );
+
+    try {
+
+      let results = [];
+
+      for (const source of NEWS_SOURCES) {
+
+        try {
+
+          const feed =
+            await parser.parseURL(
+              source.url
+            );
+
+          const matches =
+            feed.items.filter(item => {
+
+              const title =
+                (item.title || "")
+                  .toLowerCase();
+
+              const description =
+                (item.contentSnippet || "")
+                  .toLowerCase();
+
+              const searchWord =
+                keyword.toLowerCase();
+
+              return (
+                title.includes(searchWord) ||
+                description.includes(searchWord)
+              );
+            });
+
+          matches.forEach(item => {
+
+            results.push({
+              source: source.name,
+              title: item.title,
+              link: item.link
+            });
+
+          });
+
+        } catch (sourceError) {
+
+          console.log(
+            `⚠️ Search failed for ${source.name}`
+          );
+        }
+      }
+
+      const uniqueResults =
+        results.filter(
+          (item, index, array) =>
+            index ===
+            array.findIndex(
+              x => x.link === item.link
+            )
+        );
+
+      if (
+        uniqueResults.length === 0
+      ) {
+
+        await bot.sendMessage(
+          chatId,
+          `❌ No recent news found for *${keyword}*.`,
+          {
+            parse_mode: "Markdown"
+          }
+        );
+
+        return;
+      }
+
+      const topResults =
+        uniqueResults.slice(0, 5);
+
+      let message =
+        `🔎 *Search Results: ${keyword}*\n\n`;
+
+      topResults.forEach(
+        (item, index) => {
+
+          message +=
+            `${index + 1}. ${item.source}\n` +
+            `📰 *${item.title}*\n` +
+            `${item.link}\n\n`;
+        }
+      );
+
+      await bot.sendMessage(
+        chatId,
+        message,
+        {
+          parse_mode: "Markdown",
+          disable_web_page_preview: true
+        }
+      );
+
+    } catch (error) {
+
+      console.error(
+        "❌ Search error:",
+        error.message
+      );
+
+      await bot.sendMessage(
+        chatId,
+        "❌ Something went wrong while searching."
+      );
+    }
+  }
+);
+
+// ==========================================
 // BUTTONS
 // ==========================================
 
@@ -585,6 +738,22 @@ bot.on("message", (msg) => {
 
       break;
 
+    case "🔎 Search News":
+
+      bot.sendMessage(
+        chatId,
+        "🔎 *Search Daily Horizon News*\n\n" +
+        "Type:\n" +
+        "`/search Messi`\n" +
+        "`/search Nigeria`\n" +
+        "`/search Bitcoin`",
+        {
+          parse_mode: "Markdown"
+        }
+      );
+
+      break;
+
     case "ℹ️ About":
 
       bot.sendMessage(
@@ -613,6 +782,10 @@ bot.on("message", (msg) => {
       );
   }
 });
+
+// ==========================================
+// BOT STARTED
+// ==========================================
 
 console.log(
   "🚀 Daily Horizon Bot is running..."
