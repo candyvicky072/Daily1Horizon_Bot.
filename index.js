@@ -6,6 +6,13 @@ const parser = new Parser();
 const token = process.env.BOT_TOKEN;
 const bot = new TelegramBot(token, { polling: true });
 
+// Your Telegram channel
+const CHANNEL_ID = "@football_news0U";
+
+// ===============================
+// START COMMAND
+// ===============================
+
 bot.onText(/\/start/, (msg) => {
   bot.sendMessage(
     msg.chat.id,
@@ -24,6 +31,10 @@ bot.onText(/\/start/, (msg) => {
   );
 });
 
+// ===============================
+// GET NEWS FOR USERS
+// ===============================
+
 async function getNews(chatId, url) {
   try {
     const feed = await parser.parseURL(url);
@@ -38,11 +49,83 @@ async function getNews(chatId, url) {
       parse_mode: "Markdown",
       disable_web_page_preview: true
     });
+
   } catch (error) {
     console.error(error);
-    bot.sendMessage(chatId, "❌ Unable to fetch news at the moment.");
+    bot.sendMessage(
+      chatId,
+      "❌ Unable to fetch news at the moment."
+    );
   }
 }
+
+// ===============================
+// AUTOMATIC CHANNEL NEWS
+// ===============================
+
+const WORLD_NEWS_RSS =
+  "https://feeds.bbci.co.uk/news/world/rss.xml";
+
+let lastPostedLink = null;
+
+async function postNewsToChannel() {
+  try {
+    console.log("🔍 Checking for new world news...");
+
+    const feed = await parser.parseURL(WORLD_NEWS_RSS);
+
+    if (!feed.items || feed.items.length === 0) {
+      console.log("❌ No news found.");
+      return;
+    }
+
+    const article = feed.items[0];
+
+    // Prevent posting the same article again
+    if (article.link === lastPostedLink) {
+      console.log("⏭️ No new article.");
+      return;
+    }
+
+    const title = article.title || "Latest World News";
+    const link = article.link || "";
+
+    const message =
+      `🌍 *DAILY HORIZON NEWS*\n\n` +
+      `📰 *${title}*\n\n` +
+      `🔗 [Read Full Story](${link})\n\n` +
+      `━━━━━━━━━━━━━━\n` +
+      `📰 Daily Horizon\n` +
+      `🌍 Your world. Your news.`;
+
+    await bot.sendMessage(CHANNEL_ID, message, {
+      parse_mode: "Markdown",
+      disable_web_page_preview: false
+    });
+
+    lastPostedLink = article.link;
+
+    console.log("✅ News posted successfully!");
+    console.log(title);
+
+  } catch (error) {
+    console.error("❌ Automatic news error:", error.message);
+  }
+}
+
+// ===============================
+// RUN AUTOMATIC NEWS
+// ===============================
+
+// Check immediately when the bot starts
+postNewsToChannel();
+
+// Then check every 30 minutes
+setInterval(postNewsToChannel, 30 * 60 * 1000);
+
+// ===============================
+// BUTTONS
+// ===============================
 
 bot.on("message", (msg) => {
   const chatId = msg.chat.id;
@@ -51,20 +134,33 @@ bot.on("message", (msg) => {
   if (text === "/start") return;
 
   switch (text) {
+
     case "🌍 World News":
-      getNews(chatId, "https://feeds.bbci.co.uk/news/world/rss.xml");
+      getNews(
+        chatId,
+        "https://feeds.bbci.co.uk/news/world/rss.xml"
+      );
       break;
 
     case "⚽ Football":
-      getNews(chatId, "https://feeds.bbci.co.uk/sport/football/rss.xml");
+      getNews(
+        chatId,
+        "https://feeds.bbci.co.uk/sport/football/rss.xml"
+      );
       break;
 
     case "💰 Business":
-      bot.sendMessage(chatId, "💰 Business news coming soon.");
+      bot.sendMessage(
+        chatId,
+        "💰 Business news coming soon."
+      );
       break;
 
     case "💻 Technology":
-      bot.sendMessage(chatId, "💻 Technology news coming soon.");
+      bot.sendMessage(
+        chatId,
+        "💻 Technology news coming soon."
+      );
       break;
 
     case "ℹ️ About":
@@ -89,4 +185,4 @@ bot.on("message", (msg) => {
   }
 });
 
-console.log("Daily Horizon Bot is running...");
+console.log("🚀 Daily Horizon Bot is running...");
