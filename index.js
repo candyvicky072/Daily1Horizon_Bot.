@@ -1,4 +1,6 @@
 const TelegramBot = require("node-telegram-bot-api");
+const Parser = require("rss-parser");
+const parser = new Parser();
 
 const token = process.env.BOT_TOKEN;
 const bot = new TelegramBot(token, { polling: true });
