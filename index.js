@@ -13,7 +13,7 @@ bot.onText(/\/start/, (msg) => {
 
 bot.on("message", (msg) => {
   if (msg.text !== "/start") {
-    bot.sendMessage(msg.chat.id, You said: ${msg.text});
+    bot.sendMessage(msg.chat.id, `You said: ${msg.text}`);
   }
 });
 
