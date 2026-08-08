@@ -1,5 +1,6 @@
 const TelegramBot = require("node-telegram-bot-api");
 const Parser = require("rss-parser");
+
 const parser = new Parser();
 
 const token = process.env.BOT_TOKEN;
@@ -23,6 +24,26 @@ bot.onText(/\/start/, (msg) => {
   );
 });
 
+async function getNews(chatId, url) {
+  try {
+    const feed = await parser.parseURL(url);
+
+    let message = "📰 *Latest Headlines*\n\n";
+
+    feed.items.slice(0, 5).forEach((item, index) => {
+      message += `${index + 1}. *${item.title}*\n${item.link}\n\n`;
+    });
+
+    bot.sendMessage(chatId, message, {
+      parse_mode: "Markdown",
+      disable_web_page_preview: true
+    });
+  } catch (error) {
+    console.error(error);
+    bot.sendMessage(chatId, "❌ Unable to fetch news at the moment.");
+  }
+}
+
 bot.on("message", (msg) => {
   const chatId = msg.chat.id;
   const text = msg.text;
@@ -31,15 +52,15 @@ bot.on("message", (msg) => {
 
   switch (text) {
     case "🌍 World News":
-      bot.sendMessage(chatId, "🌍 World news updates will appear here soon.");
+      getNews(chatId, "https://feeds.bbci.co.uk/news/world/rss.xml");
       break;
 
     case "⚽ Football":
-      bot.sendMessage(chatId, "⚽ Latest football news coming soon.");
+      getNews(chatId, "https://feeds.bbci.co.uk/sport/football/rss.xml");
       break;
 
     case "💰 Business":
-      bot.sendMessage(chatId, "💰 Business and market updates coming soon.");
+      bot.sendMessage(chatId, "💰 Business news coming soon.");
       break;
 
     case "💻 Technology":
@@ -47,18 +68,24 @@ bot.on("message", (msg) => {
       break;
 
     case "ℹ️ About":
-      bot.sendMessage(chatId, "📰 Daily Horizon\nYour trusted news source on Telegram.");
+      bot.sendMessage(
+        chatId,
+        "📰 Daily Horizon\nYour trusted news source on Telegram."
+      );
       break;
 
-   case "📢 Join Channel":
-  bot.sendMessage(
-    chatId,
-    "Join our Telegram channel:\nhttps://t.me/football_news0U"
-  );
-  break;
+    case "📢 Join Channel":
+      bot.sendMessage(
+        chatId,
+        "Join our Telegram channel:\nhttps://t.me/football_news0U"
+      );
+      break;
 
     default:
-      bot.sendMessage(chatId, "Please choose one of the buttons below.");
+      bot.sendMessage(
+        chatId,
+        "Please choose one of the buttons below."
+      );
   }
 });
 
