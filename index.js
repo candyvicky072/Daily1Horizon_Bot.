@@ -10,6 +10,14 @@ const bot = new TelegramBot(token, { polling: true });
 const CHANNEL_ID = "@football_news0U";
 
 // ==========================================
+// ADMIN
+// ==========================================
+
+const ADMIN_ID = 8432370237;
+
+let autoPosting = true;
+
+// ==========================================
 // NEWS SOURCES
 // ==========================================
 
@@ -33,7 +41,7 @@ const NEWS_SOURCES = [
 ];
 
 // ==========================================
-// PERSISTENT DUPLICATE PROTECTION
+// DUPLICATE PROTECTION
 // ==========================================
 
 const DATA_FILE = "./posted_articles.json";
@@ -52,7 +60,6 @@ try {
 
 function savePostedArticles() {
   try {
-    // Keep only the latest 500 links
     postedArticles = postedArticles.slice(-500);
 
     fs.writeFileSync(
@@ -89,28 +96,209 @@ bot.onText(/\/start/, (msg) => {
 });
 
 // ==========================================
-// GET NEWS FOR USERS
+// ADMIN CHECK
+// ==========================================
+
+function isAdmin(msg) {
+  return msg.from && msg.from.id === ADMIN_ID;
+}
+
+// ==========================================
+// ADMIN COMMAND
+// ==========================================
+
+bot.onText(/\/admin/, (msg) => {
+
+  if (!isAdmin(msg)) {
+    bot.sendMessage(
+      msg.chat.id,
+      "❌ You are not authorized to use admin commands."
+    );
+    return;
+  }
+
+  bot.sendMessage(
+    msg.chat.id,
+    "🔐 *Daily Horizon Admin Panel*\n\n" +
+    "📢 /post - Post next news now\n" +
+    "📊 /status - Check bot status\n" +
+    "📰 /sources - View news sources\n" +
+    "⏸️ /stop - Stop automatic posting\n" +
+    "▶️ /resume - Resume automatic posting",
+    {
+      parse_mode: "Markdown"
+    }
+  );
+});
+
+// ==========================================
+// ADMIN: POST NOW
+// ==========================================
+
+bot.onText(/\/post/, async (msg) => {
+
+  if (!isAdmin(msg)) {
+    bot.sendMessage(
+      msg.chat.id,
+      "❌ You are not authorized."
+    );
+    return;
+  }
+
+  bot.sendMessage(
+    msg.chat.id,
+    "📰 Finding the latest news..."
+  );
+
+  await automaticNews();
+
+  bot.sendMessage(
+    msg.chat.id,
+    "✅ News posting process completed."
+  );
+});
+
+// ==========================================
+// ADMIN: STATUS
+// ==========================================
+
+bot.onText(/\/status/, (msg) => {
+
+  if (!isAdmin(msg)) {
+    bot.sendMessage(
+      msg.chat.id,
+      "❌ You are not authorized."
+    );
+    return;
+  }
+
+  bot.sendMessage(
+    msg.chat.id,
+    "📊 *Daily Horizon Status*\n\n" +
+    `🤖 Bot: Online\n` +
+    `📢 Channel: ${CHANNEL_ID}\n` +
+    `⏰ Automatic posting: ${
+      autoPosting ? "ON ✅" : "OFF ⏸️"
+    }\n` +
+    `📰 Saved articles: ${postedArticles.length}`,
+    {
+      parse_mode: "Markdown"
+    }
+  );
+});
+
+// ==========================================
+// ADMIN: SOURCES
+// ==========================================
+
+bot.onText(/\/sources/, (msg) => {
+
+  if (!isAdmin(msg)) {
+    bot.sendMessage(
+      msg.chat.id,
+      "❌ You are not authorized."
+    );
+    return;
+  }
+
+  let message =
+    "📰 *Daily Horizon Sources*\n\n";
+
+  NEWS_SOURCES.forEach((source, index) => {
+    message +=
+      `${index + 1}. ${source.name}\n`;
+  });
+
+  bot.sendMessage(
+    msg.chat.id,
+    message,
+    {
+      parse_mode: "Markdown"
+    }
+  );
+});
+
+// ==========================================
+// ADMIN: STOP
+// ==========================================
+
+bot.onText(/\/stop/, (msg) => {
+
+  if (!isAdmin(msg)) {
+    bot.sendMessage(
+      msg.chat.id,
+      "❌ You are not authorized."
+    );
+    return;
+  }
+
+  autoPosting = false;
+
+  bot.sendMessage(
+    msg.chat.id,
+    "⏸️ Automatic news posting has been stopped."
+  );
+});
+
+// ==========================================
+// ADMIN: RESUME
+// ==========================================
+
+bot.onText(/\/resume/, (msg) => {
+
+  if (!isAdmin(msg)) {
+    bot.sendMessage(
+      msg.chat.id,
+      "▶️ Only the admin can resume the bot."
+    );
+    return;
+  }
+
+  autoPosting = true;
+
+  bot.sendMessage(
+    msg.chat.id,
+    "▶️ Automatic news posting has been resumed."
+  );
+});
+
+// ==========================================
+// GET NEWS
 // ==========================================
 
 async function getNews(chatId, url) {
+
   try {
+
     const feed = await parser.parseURL(url);
 
-    let message = "📰 *Latest Headlines*\n\n";
+    let message =
+      "📰 *Latest Headlines*\n\n";
 
-    feed.items.slice(0, 5).forEach((item, index) => {
-      message +=
-        `${index + 1}. *${item.title}*\n` +
-        `${item.link}\n\n`;
-    });
+    feed.items
+      .slice(0, 5)
+      .forEach((item, index) => {
 
-    await bot.sendMessage(chatId, message, {
-      parse_mode: "Markdown",
-      disable_web_page_preview: true
-    });
+        message +=
+          `${index + 1}. *${item.title}*\n` +
+          `${item.link}\n\n`;
+      });
+
+    await bot.sendMessage(
+      chatId,
+      message,
+      {
+        parse_mode: "Markdown",
+        disable_web_page_preview: true
+      }
+    );
 
   } catch (error) {
-    console.error("News error:", error.message);
+
+    console.error(
+      "News error:",
+      error.message
+    );
 
     await bot.sendMessage(
       chatId,
@@ -152,39 +340,55 @@ function getImage(item) {
 }
 
 // ==========================================
-// POST AUTOMATIC NEWS
+// POST NEWS TO CHANNEL
 // ==========================================
 
 async function postNewsToChannel(source) {
 
   try {
 
-    console.log(`🔍 Checking ${source.name}...`);
+    console.log(
+      `🔍 Checking ${source.name}...`
+    );
 
-    const feed = await parser.parseURL(source.url);
+    const feed =
+      await parser.parseURL(source.url);
 
-    if (!feed.items || feed.items.length === 0) {
-      console.log("❌ No articles found.");
+    if (
+      !feed.items ||
+      feed.items.length === 0
+    ) {
+      console.log(
+        "❌ No articles found."
+      );
       return;
     }
 
-    // Find an article we haven't posted
-    const article = feed.items.find(
-      item =>
-        item.link &&
-        !postedArticles.includes(item.link)
-    );
+    const article =
+      feed.items.find(
+        item =>
+          item.link &&
+          !postedArticles.includes(
+            item.link
+          )
+      );
 
     if (!article) {
-      console.log(`⏭️ No new ${source.name} article.`);
+
+      console.log(
+        `⏭️ No new ${source.name} article.`
+      );
+
       return;
     }
 
     const title =
-      article.title || "Latest News";
+      article.title ||
+      "Latest News";
 
     const link =
-      article.link || "";
+      article.link ||
+      "";
 
     const image =
       getImage(article);
@@ -192,10 +396,12 @@ async function postNewsToChannel(source) {
     let description = "";
 
     if (article.contentSnippet) {
-      description = article.contentSnippet
-        .replace(/\s+/g, " ")
-        .trim()
-        .substring(0, 300);
+
+      description =
+        article.contentSnippet
+          .replace(/\s+/g, " ")
+          .trim()
+          .substring(0, 300);
     }
 
     const message =
@@ -206,12 +412,10 @@ async function postNewsToChannel(source) {
       `━━━━━━━━━━━━━━\n` +
       `🌍 Stay informed with Daily Horizon`;
 
-    // ======================================
-    // BUTTON
-    // ======================================
-
     const options = {
+
       parse_mode: "Markdown",
+
       reply_markup: {
         inline_keyboard: [
           [
@@ -223,10 +427,6 @@ async function postNewsToChannel(source) {
         ]
       }
     };
-
-    // ======================================
-    // SEND IMAGE OR TEXT
-    // ======================================
 
     if (image) {
 
@@ -241,7 +441,9 @@ async function postNewsToChannel(source) {
           }
         );
 
-        console.log("🖼️ Image news posted.");
+        console.log(
+          "🖼️ Image news posted."
+        );
 
       } catch (imageError) {
 
@@ -265,12 +467,15 @@ async function postNewsToChannel(source) {
       );
     }
 
-    // Save article as posted
-    postedArticles.push(article.link);
+    postedArticles.push(
+      article.link
+    );
 
     savePostedArticles();
 
-    console.log(`✅ Posted: ${title}`);
+    console.log(
+      `✅ Posted: ${title}`
+    );
 
   } catch (error) {
 
@@ -289,6 +494,13 @@ let currentSource = 0;
 
 async function automaticNews() {
 
+  if (!autoPosting) {
+    console.log(
+      "⏸️ Automatic posting is OFF."
+    );
+    return;
+  }
+
   const source =
     NEWS_SOURCES[currentSource];
 
@@ -297,19 +509,19 @@ async function automaticNews() {
   currentSource++;
 
   if (
-    currentSource >= NEWS_SOURCES.length
+    currentSource >=
+    NEWS_SOURCES.length
   ) {
     currentSource = 0;
   }
 }
 
 // ==========================================
-// START AUTOMATIC NEWS
+// START AUTOMATIC POSTING
 // ==========================================
 
 automaticNews();
 
-// Every 30 minutes
 setInterval(
   automaticNews,
   30 * 60 * 1000
@@ -321,10 +533,17 @@ setInterval(
 
 bot.on("message", (msg) => {
 
-  const chatId = msg.chat.id;
-  const text = msg.text;
+  const chatId =
+    msg.chat.id;
 
-  if (!text || text === "/start") {
+  const text =
+    msg.text;
+
+  if (
+    !text ||
+    text === "/start" ||
+    text.startsWith("/")
+  ) {
     return;
   }
 
