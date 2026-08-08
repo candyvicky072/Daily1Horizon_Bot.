@@ -1,13 +1,14 @@
 {
   "name": "dailyhorizonbot",
   "version": "1.0.0",
-  "description": "A simple Telegram bot",
+  "description": "A simple Telegram news bot",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
-"dependencies": {
-  "node-telegram-bot-api": "^0.66.0",
-  "rss-parser": "^3.13.0",
-  "axios": "^1.7.2"
+  "dependencies": {
+    "node-telegram-bot-api": "^0.66.0",
+    "rss-parser": "^3.13.0",
+    "axios": "^1.7.2"
+  }
 }
