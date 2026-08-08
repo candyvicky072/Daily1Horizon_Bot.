@@ -48,12 +48,12 @@ bot.on("message", (msg) => {
       bot.sendMessage(chatId, "📰 Daily Horizon\nYour trusted news source on Telegram.");
       break;
 
-    case "📢 Join Channel":
-      bot.sendMessage(
-        chatId,
-        "Join our Telegram channel:\nhttps://t.me/football_news0U
-      );
-      break;
+   case "📢 Join Channel":
+  bot.sendMessage(
+    chatId,
+    "Join our Telegram channel:\nhttps://t.me/football_news0U"
+  );
+  break;
 
     default:
       bot.sendMessage(chatId, "Please choose one of the buttons below.");
