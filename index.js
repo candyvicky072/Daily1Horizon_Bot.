@@ -51,7 +51,7 @@ bot.on("message", (msg) => {
     case "📢 Join Channel":
       bot.sendMessage(
         chatId,
-        "Join our Telegram channel:\nhttps://t.me/YOUR_CHANNEL_USERNAME"
+        "Join our Telegram channel:\nhttps://t.me/football_news0U
       );
       break;
 
